@@ -20,6 +20,8 @@
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
+#include "motor.h"
+#include "tim.h"
 
 /* Private includes ----------------------------------------------------------*/
 
@@ -40,6 +42,10 @@ enum __attribute__((packed)) cmd_id {
     CMD_RESET = 1,
     CMD_TEST = 2,
     CMD_LED_TOGGLE,
+    CMD_AZ_OFFSET,
+    CMD_EL_OFFSET,
+    CMD_AZ_SET_K,
+    CMD_EL_SET_K,
 };
 
 struct cmd {
@@ -60,6 +66,18 @@ static void cmd_work(struct cmd cmd)
     } break;
     case CMD_LED_TOGGLE: {
         gpio_led_toggle();
+    } break;
+    case CMD_AZ_OFFSET: {
+        motor_az_offset(cmd.arg);
+    } break;
+    case CMD_EL_OFFSET: {
+        motor_el_offset(cmd.arg);
+    } break;
+    case CMD_AZ_SET_K: {
+        motor_az_set_k(cmd.arg);
+    } break;
+    case CMD_EL_SET_K: {
+        motor_el_set_k(cmd.arg);
     } break;
 
     default:
@@ -92,6 +110,9 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_LPUART1_UART_Init();
+    MX_TIM2_Init();
+    MX_TIM3_Init();
+    MX_TIM15_Init();
 
     /* Infinite loop */
 
@@ -143,8 +164,8 @@ void SystemClock_Config(void)
 
     /* Set AHB prescaler*/
     LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
-    LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_1);
-    LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+    LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_4);
+    LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_4);
 
     LL_Init1msTick(100000000);
 
