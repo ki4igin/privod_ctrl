@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usart.h"
+#include "stm32g4xx_ll_usart.h"
 #include "gpio.h"
 #include "motor.h"
 #include "tim.h"
@@ -44,10 +45,14 @@ enum __attribute__((packed)) cmd_id {
     CMD_LED_TOGGLE,
     CMD_AZ_SET_K,
     CMD_EL_SET_K,
-    CMD_AZ_OFFSET,
-    CMD_EL_OFFSET,
+    CMD_STOP,
     CMD_AZ_STOP,
     CMD_EL_STOP,
+    CMD_AZ_OFFSET,
+    CMD_EL_OFFSET,
+    CMD_AZ_GET_POS,
+    CMD_EL_GET_POS,
+    CMD_SET_ORIGIN,
 };
 
 struct cmd {
@@ -60,11 +65,28 @@ union {
     uint8_t data[4];
 } uart_buf_rx = {0};
 
+static void uart_send_word(struct cmd cmd)
+{
+    uint8_t *buf = (uint8_t *)&cmd;
+    for (uint32_t i = 0; i < 4; i++) {
+        LL_USART_TransmitData8(USART2, *buf++);
+    }
+}
+
 static void cmd_work(struct cmd cmd)
 {
     switch (cmd.id) {
     case CMD_RESET: {
         NVIC_SystemReset();
+    } break;
+    case CMD_STOP: {
+        motor_stop();
+    } break;
+    case CMD_AZ_STOP: {
+        motor_az_stop();
+    } break;
+    case CMD_EL_STOP: {
+        motor_el_stop();
     } break;
     case CMD_LED_TOGGLE: {
         gpio_led_toggle();
@@ -75,17 +97,22 @@ static void cmd_work(struct cmd cmd)
     case CMD_EL_OFFSET: {
         motor_el_offset(cmd.arg);
     } break;
-    case CMD_AZ_STOP: {
-        motor_az_stop();
-    } break;
-    case CMD_EL_STOP: {
-        motor_el_stop();
-    } break;
     case CMD_AZ_SET_K: {
         motor_az_set_k(cmd.arg);
     } break;
     case CMD_EL_SET_K: {
         motor_el_set_k(cmd.arg);
+    } break;
+    case CMD_AZ_GET_POS: {
+        cmd.arg = motor_az_get_pos();
+        uart_send_word(cmd);
+    } break;
+    case CMD_EL_GET_POS: {
+        cmd.arg = motor_el_get_pos();
+        uart_send_word(cmd);
+    } break;
+    case CMD_SET_ORIGIN: {
+        motor_origin();
     } break;
 
     default:
@@ -117,7 +144,7 @@ int main(void)
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
-    MX_LPUART1_UART_Init();
+    MX_USART2_UART_Init();
     MX_TIM6_Init();
 
     LL_TIM_EnableIT_UPDATE(TIM6);
@@ -126,11 +153,18 @@ int main(void)
     /* Infinite loop */
 
     while (1) {
-        if (LL_LPUART_IsActiveFlag_RXFT(LPUART1)) {
+        if (LL_USART_IsActiveFlag_RXFT(USART2)) {
             for (uint32_t i = 0; i < 4; i++) {
-                uart_buf_rx.data[i] = LL_LPUART_ReceiveData8(LPUART1);
+                uart_buf_rx.data[i] = LL_USART_ReceiveData8(USART2);
             }
             cmd_work(uart_buf_rx.cmd);
+        }
+        if (LL_USART_IsActiveFlag_RTO(USART2)) {
+            LL_USART_ClearFlag_RTO(USART2);
+            while (LL_USART_IsActiveFlag_RXNE(USART2)) {
+                uint32_t t = LL_USART_ReceiveData8(USART2);
+                (void)t;
+            }
         }
 
         // LL_mDelay(1000);

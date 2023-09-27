@@ -28,7 +28,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-void MX_LPUART1_UART_Init(void);
+void MX_USART2_UART_Init(void);
 
 #ifdef __cplusplus
 }

@@ -35,6 +35,12 @@ void motor_el_stop(void)
     privod_stop(&el);
 }
 
+void motor_stop(void)
+{
+    privod_stop(&az);
+    privod_stop(&el);
+}
+
 void motor_az_set_k(uint32_t k_deg2pulse)
 {
     az.k_deg2pulse = k_deg2pulse;
@@ -43,6 +49,22 @@ void motor_az_set_k(uint32_t k_deg2pulse)
 void motor_el_set_k(uint32_t k_deg2pulse)
 {
     el.k_deg2pulse = k_deg2pulse;
+}
+
+int32_t motor_az_get_pos(void)
+{
+    return privod_get_pos(&az);
+}
+
+int32_t motor_el_get_pos(void)
+{
+    return privod_get_pos(&el);
+}
+
+void motor_origin(void)
+{
+    privod_set_origin(&az);
+    privod_set_origin(&el);
 }
 
 void motor_tick_ms(void)
