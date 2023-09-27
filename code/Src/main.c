@@ -42,15 +42,17 @@ enum __attribute__((packed)) cmd_id {
     CMD_RESET = 1,
     CMD_TEST = 2,
     CMD_LED_TOGGLE,
-    CMD_AZ_OFFSET,
-    CMD_EL_OFFSET,
     CMD_AZ_SET_K,
     CMD_EL_SET_K,
+    CMD_AZ_OFFSET,
+    CMD_EL_OFFSET,
+    CMD_AZ_STOP,
+    CMD_EL_STOP,
 };
 
 struct cmd {
     uint16_t id;
-    uint16_t arg;
+    int16_t arg;
 };
 
 union {
@@ -72,6 +74,12 @@ static void cmd_work(struct cmd cmd)
     } break;
     case CMD_EL_OFFSET: {
         motor_el_offset(cmd.arg);
+    } break;
+    case CMD_AZ_STOP: {
+        motor_az_stop();
+    } break;
+    case CMD_EL_STOP: {
+        motor_el_stop();
     } break;
     case CMD_AZ_SET_K: {
         motor_az_set_k(cmd.arg);
@@ -110,9 +118,10 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_LPUART1_UART_Init();
-    MX_TIM2_Init();
-    MX_TIM3_Init();
-    MX_TIM15_Init();
+    MX_TIM6_Init();
+
+    LL_TIM_EnableIT_UPDATE(TIM6);
+    LL_TIM_EnableCounter(TIM6);
 
     /* Infinite loop */
 
@@ -124,7 +133,7 @@ int main(void)
             cmd_work(uart_buf_rx.cmd);
         }
 
-        LL_mDelay(1000);
+        // LL_mDelay(1000);
         // gpio_led_toggle();
     }
 }

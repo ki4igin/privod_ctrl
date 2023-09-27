@@ -3,15 +3,42 @@
 
 #include "stm32g4xx.h"
 
-struct privod {
-    struct tim {
-        TIM_TypeDef *const inst;
-        volatile uint32_t *const ccr;
-    } tim_pos, tim_neg;
+struct gpio {
+    GPIO_TypeDef *port;
+    uint32_t pin;
+};
 
+struct privod {
+    struct gpio gpio_pos;
+    struct gpio gpio_neg;
+    int32_t offset_ms;
     uint32_t k_deg2pulse;
 };
 
-void privod_offset(struct privod *s, int32_t offset_deg);
+inline static void privod_offset(struct privod *s, int32_t offset_deg)
+{
+    s->offset_ms += offset_deg * s->k_deg2pulse;
+}
+
+inline static void privod_mov_process(struct privod *s)
+{
+    if (s->offset_ms > 0) {
+        LL_GPIO_ResetOutputPin(s->gpio_neg.port, s->gpio_neg.pin);
+        LL_GPIO_SetOutputPin(s->gpio_pos.port, s->gpio_pos.pin);
+        s->offset_ms--;
+    } else if (s->offset_ms < 0) {
+        LL_GPIO_ResetOutputPin(s->gpio_pos.port, s->gpio_pos.pin);
+        LL_GPIO_SetOutputPin(s->gpio_neg.port, s->gpio_neg.pin);
+        s->offset_ms++;
+    } else {
+        LL_GPIO_ResetOutputPin(s->gpio_neg.port, s->gpio_neg.pin);
+        LL_GPIO_ResetOutputPin(s->gpio_pos.port, s->gpio_pos.pin);
+    }
+}
+
+inline static void privod_stop(struct privod *s)
+{
+    s->offset_ms = 0;
+}
 
 #endif
